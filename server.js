@@ -10,8 +10,6 @@ import { readFile, rm, writeFile } from "node:fs/promises";
 const PORT = Number(process.env.PORT ?? 8080);
 const TOKEN = process.env.RELAY_TOKEN ?? "";
 const AUTOEXEC_FILE = process.env.AUTOEXEC_FILE ?? "./autoexec.lua";
-const PUBLIC_URL = process.env.PUBLIC_URL ?? ""; // optional, e.g. https://your.domain.com
-const CLIENT_SCRIPT_FILE = new URL("./client.lua", import.meta.url);
 
 if (TOKEN.length < 24) {
   console.error("Set RELAY_TOKEN to a random string of 24+ characters.");
@@ -324,17 +322,6 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === "GET" && path === "/health") {
       return sendJson(res, 200, { ok: true, clientConnected: isClientConnected() });
-    }
-
-    // Public loader: loadstring(game:HttpGet("https://your.domain.com/script"))()
-    // It contains the server address but never the token.
-    if (req.method === "GET" && path === "/script") {
-      const source = await readFile(CLIENT_SCRIPT_FILE, "utf8");
-      const proto = String(req.headers["x-forwarded-proto"] ?? "http").split(",")[0].trim();
-      const host = String(req.headers["x-forwarded-host"] ?? req.headers.host ?? "").split(",")[0].trim();
-      const base = (PUBLIC_URL || `${proto}://${host}`).replace(/\/+$/, "");
-      res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
-      return res.end(source.replace("__BASE__", () => base));
     }
 
     // MCP endpoint: /mcp (Authorization header) or /mcp/<token> (secret in the URL)
